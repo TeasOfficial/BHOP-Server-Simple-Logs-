@@ -1,5 +1,6 @@
 #include <sourcemod>
 #include <sdktools>
+#include <files>
 #include <morecolors>
 #include <geoip>
 #include <shavit/core>
@@ -11,7 +12,7 @@ public Plugin myinfo =
     name = "BHOP Server Simple Logs",
     author = "Picrisol45",
     description = "Record logs for a BunnyHop server (only supports shavit timer)",
-    version = "1.01",
+    version = "1.02",
     url = ""
 };
 
@@ -49,15 +50,21 @@ public Action OnLogAction(Handle source, Identity ident, int client, int target,
 }
 
 // Simple log writer(automatically update files based on date)
+// Logs are grouped into monthly folders, e.g. addons/sourcemod/logs/server_2026-01/server_2026-01-05.log
 stock void WriteLog(const char[] format, any ...)
 {
+    char folder[PLATFORM_MAX_PATH];
     char logfile[PLATFORM_MAX_PATH];
-    char timestr[32];
-    FormatTime(logfile, sizeof(logfile), "addons/sourcemod/logs/server_%Y-%m-%d.log");
-    FormatTime(timestr, sizeof(timestr), "%H:%M:%S");
+    char date[16];
+    FormatTime(folder, sizeof(folder), "addons/sourcemod/logs/server_%Y-%m");
+    FormatTime(date, sizeof(date), "%Y-%m-%d");
+    Format(logfile, sizeof(logfile), "%s/server_%s.log", folder, date);
 
     char buffer[512];
     VFormat(buffer, sizeof(buffer), format, 2);
+
+    if (!DirExists(folder))
+        CreateDirectory(folder);
 
     LogToFileEx(logfile, "%s", buffer);
 }
@@ -104,7 +111,7 @@ public void OnMapStart()
     WriteLog("- - - - - >>> Map changed to: %s <<< - - - - -", gS_Mapname);
 }
 
-void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int track, bool manual)
+public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int track, bool manual)
 {
     char name[MAX_NAME_LENGTH];
     char styleName[64];
@@ -118,7 +125,7 @@ void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int track, bo
 }
 
 
-void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
+public void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
 {
     char name[MAX_NAME_LENGTH];
     char steamID[32];
@@ -293,7 +300,7 @@ public Action Timer_SendConnectMessage(Handle timer, any client)
     char steamID[32];
 
     GetClientName(client, name, sizeof(name));
-    GetClientAuthString(client, steamID, sizeof(steamID));
+    GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID));
 
     WriteLog("▲ %s has joined.", name);
 
